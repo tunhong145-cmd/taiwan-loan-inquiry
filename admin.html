@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow">
+  <title>貸款額度查詢｜管理員後台</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root {
+      --brand: #176b3a;
+      --brand-dark: #10532c;
+      --brand-soft: #eaf6ef;
+      --ink: #17211b;
+      --muted: #66736b;
+      --line: #dfe6e1;
+      --paper: #ffffff;
+      --canvas: #f4f7f5;
+      --warning: #a56308;
+      --warning-soft: #fff5df;
+      --danger: #b42318;
+      --shadow: 0 16px 45px rgba(24, 54, 37, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      background: var(--canvas);
+      font-family: "Noto Sans TC", system-ui, sans-serif;
+    }
+    button, input { font: inherit; }
+    button { cursor: pointer; }
+    .hidden { display: none !important; }
+
+    .login-shell {
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      background:
+        radial-gradient(circle at 15% 15%, rgba(48, 150, 91, .16), transparent 28%),
+        linear-gradient(135deg, #f6faf7 0%, #edf4ef 100%);
+    }
+    .login-card {
+      width: min(100%, 420px);
+      padding: 36px;
+      border: 1px solid rgba(23, 107, 58, .12);
+      border-radius: 20px;
+      background: rgba(255, 255, 255, .96);
+      box-shadow: var(--shadow);
+    }
+    .brand-mark {
+      width: 48px;
+      height: 48px;
+      display: grid;
+      place-items: center;
+      margin-bottom: 20px;
+      border-radius: 14px;
+      color: #fff;
+      background: var(--brand);
+      font-weight: 700;
+      letter-spacing: .08em;
+    }
+    h1, h2, p { margin-top: 0; }
+    .login-card h1 { margin-bottom: 8px; font-size: 25px; }
+    .login-card > p { margin-bottom: 28px; color: var(--muted); font-size: 14px; }
+    .field { margin-bottom: 18px; }
+    .field label { display: block; margin-bottom: 7px; font-size: 14px; font-weight: 600; }
+    .input {
+      width: 100%;
+      padding: 12px 14px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      color: var(--ink);
+      background: #fff;
+      outline: none;
+      transition: border-color .2s, box-shadow .2s;
+    }
+    .input:focus { border-color: var(--brand); box-shadow: 0 0 0 3px rgba(23, 107, 58, .12); }
+    .btn {
+      border: 0;
+      border-radius: 10px;
+      padding: 11px 16px;
+      font-weight: 600;
+      transition: background .2s, opacity .2s, transform .2s;
+    }
+    .btn:hover:not(:disabled) { transform: translateY(-1px); }
+    .btn:disabled { cursor: not-allowed; opacity: .58; }
+    .btn-primary { color: #fff; background: var(--brand); }
+    .btn-primary:hover:not(:disabled) { background: var(--brand-dark); }
+    .btn-secondary { color: var(--brand); background: var(--brand-soft); }
+    .btn-login { width: 100%; margin-top: 6px; padding: 13px; }
+    .message { min-height: 22px; margin: 14px 0 0; color: var(--danger); font-size: 13px; }
+
+    .app-header { color: #fff; background: var(--brand-dark); }
+    .header-inner {
+      max-width: 1240px;
+      min-height: 72px;
+      margin: 0 auto;
+      padding: 14px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+    }
+    .title-group h1 { margin: 0 0 3px; font-size: 20px; }
+    .title-group p { margin: 0; color: rgba(255,255,255,.72); font-size: 12px; }
+    .header-actions { display: flex; align-items: center; gap: 10px; }
+    .header-actions .btn { color: #fff; background: rgba(255,255,255,.12); }
+    .header-actions .btn:hover:not(:disabled) { background: rgba(255,255,255,.2); }
+
+    main { max-width: 1240px; margin: 0 auto; padding: 28px 24px 48px; }
+    .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-bottom: 22px; }
+    .stat-card { padding: 21px 22px; border: 1px solid var(--line); border-radius: 14px; background: var(--paper); }
+    .stat-label { color: var(--muted); font-size: 13px; font-weight: 500; }
+    .stat-value { margin-top: 8px; font-size: 29px; line-height: 1; font-weight: 700; }
+    .stat-card.pending .stat-value { color: var(--warning); }
+    .stat-card.approved .stat-value { color: var(--brand); }
+
+    .panel { overflow: hidden; border: 1px solid var(--line); border-radius: 16px; background: var(--paper); box-shadow: 0 8px 28px rgba(25, 54, 38, .05); }
+    .panel-head {
+      min-height: 68px;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      border-bottom: 1px solid var(--line);
+    }
+    .panel-head h2 { margin: 0; font-size: 17px; }
+    .refresh-state { margin-top: 3px; color: var(--muted); font-size: 12px; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; min-width: 780px; }
+    th, td { padding: 15px 18px; border-bottom: 1px solid #edf1ee; text-align: left; vertical-align: middle; }
+    th { color: var(--muted); background: #fafcfb; font-size: 12px; font-weight: 600; white-space: nowrap; }
+    td { font-size: 14px; }
+    tbody tr:last-child td { border-bottom: 0; }
+    tbody tr:hover { background: #fbfdfc; }
+    .name-cell { font-weight: 600; }
+    .time-cell { color: var(--muted); white-space: nowrap; }
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .status::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+    .status-pending { color: var(--warning); background: var(--warning-soft); }
+    .status-approved { color: var(--brand); background: var(--brand-soft); }
+    .amount-form { display: flex; gap: 8px; min-width: 245px; }
+    .amount-form .input { min-width: 130px; padding: 9px 11px; }
+    .amount-form .btn { padding: 9px 14px; white-space: nowrap; }
+    .empty-state { padding: 58px 20px; color: var(--muted); text-align: center; }
+    .toast {
+      position: fixed;
+      right: 22px;
+      bottom: 22px;
+      z-index: 20;
+      max-width: min(380px, calc(100vw - 44px));
+      padding: 13px 17px;
+      border-radius: 10px;
+      color: #fff;
+      background: #26342c;
+      box-shadow: var(--shadow);
+      font-size: 14px;
+    }
+    .toast.error { background: var(--danger); }
+
+    @media (max-width: 680px) {
+      .login-card { padding: 28px 22px; }
+      .header-inner { align-items: flex-start; padding: 14px 16px; }
+      .title-group p { display: none; }
+      .header-actions { gap: 6px; }
+      .header-actions .btn { padding: 9px 11px; font-size: 13px; }
+      main { padding: 18px 14px 36px; }
+      .stats { gap: 9px; }
+      .stat-card { padding: 16px 13px; }
+      .stat-value { font-size: 24px; }
+      .panel-head { align-items: flex-start; padding: 14px 16px; }
+    }
+  </style>
+</head>
+<body>
+  <section id="loginView" class="login-shell">
+    <form id="loginForm" class="login-card" autocomplete="on">
+      <div class="brand-mark">管理</div>
+      <h1>管理員登入</h1>
+      <p>請登入以查看查詢記錄並設定核定額度。</p>
+      <div class="field">
+        <label for="emailInput">管理員帳號</label>
+        <input id="emailInput" class="input" type="email" value="admin@taiwan-subsidy.com" autocomplete="username" required>
+      </div>
+      <div class="field">
+        <label for="passwordInput">密碼</label>
+        <input id="passwordInput" class="input" type="password" autocomplete="current-password" required autofocus>
+      </div>
+      <button id="loginBtn" class="btn btn-primary btn-login" type="submit">登入後台</button>
+      <p id="loginMessage" class="message" role="alert" aria-live="polite"></p>
+    </form>
+  </section>
+
+  <div id="dashboardView" class="hidden">
+    <header class="app-header">
+      <div class="header-inner">
+        <div class="title-group">
+          <h1>貸款額度查詢管理</h1>
+          <p>查詢記錄每 5 秒自動更新</p>
+        </div>
+        <div class="header-actions">
+          <button id="refreshBtn" class="btn" type="button">立即刷新</button>
+          <button id="logoutBtn" class="btn" type="button">登出</button>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <section class="stats" aria-label="查詢統計">
+        <div class="stat-card">
+          <div class="stat-label">總查詢數</div>
+          <div id="totalCount" class="stat-value">—</div>
+        </div>
+        <div class="stat-card pending">
+          <div class="stat-label">待處理</div>
+          <div id="pendingCount" class="stat-value">—</div>
+        </div>
+        <div class="stat-card approved">
+          <div class="stat-label">已核定</div>
+          <div id="approvedCount" class="stat-value">—</div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>全部查詢記錄</h2>
+            <div id="refreshState" class="refresh-state" aria-live="polite">正在載入資料…</div>
+          </div>
+        </div>
+        <div id="tableWrap" class="table-wrap hidden">
+          <table>
+            <thead>
+              <tr>
+                <th>姓名</th>
+                <th>提交時間</th>
+                <th>目前狀態</th>
+                <th>核定額度</th>
+                <th>設定額度</th>
+              </tr>
+            </thead>
+            <tbody id="recordsBody"></tbody>
+          </table>
+        </div>
+        <div id="emptyState" class="empty-state">尚無查詢記錄</div>
+      </section>
+    </main>
+  </div>
+
+  <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+
+  <script>
+    const SUPABASE_URL = 'https://xgjnmhedqwehxgwnlggo.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_p_Y0qsHy4W4cv5f--pprEg_5Bdq1-kt';
+    const ADMIN_EMAIL = 'admin@taiwan-subsidy.com';
+    const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+    const loginView = document.getElementById('loginView');
+    const dashboardView = document.getElementById('dashboardView');
+    const loginForm = document.getElementById('loginForm');
+    const loginBtn = document.getElementById('loginBtn');
+    const loginMessage = document.getElementById('loginMessage');
+    const recordsBody = document.getElementById('recordsBody');
+    const tableWrap = document.getElementById('tableWrap');
+    const emptyState = document.getElementById('emptyState');
+    const refreshState = document.getElementById('refreshState');
+    const refreshBtn = document.getElementById('refreshBtn');
+    let refreshTimer = null;
+    let toastTimer = null;
+    let isLoading = false;
+
+    function setView(isLoggedIn) {
+      loginView.classList.toggle('hidden', isLoggedIn);
+      dashboardView.classList.toggle('hidden', !isLoggedIn);
+      if (isLoggedIn) {
+        loadRecords();
+        clearInterval(refreshTimer);
+        refreshTimer = setInterval(loadRecords, 5000);
+      } else {
+        clearInterval(refreshTimer);
+        refreshTimer = null;
+        recordsBody.replaceChildren();
+        document.getElementById('passwordInput').value = '';
+      }
+    }
+
+    function showToast(message, isError = false) {
+      const toast = document.getElementById('toast');
+      clearTimeout(toastTimer);
+      toast.textContent = message;
+      toast.classList.toggle('error', isError);
+      toast.classList.remove('hidden');
+      toastTimer = setTimeout(() => toast.classList.add('hidden'), 3200);
+    }
+
+    function formatTime(value) {
+      if (!value) return '—';
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return '—';
+      return new Intl.DateTimeFormat('zh-TW', {
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+      }).format(date);
+    }
+
+    function makeCell(text, className = '') {
+      const cell = document.createElement('td');
+      cell.textContent = text ?? '—';
+      if (className) cell.className = className;
+      return cell;
+    }
+
+    function collectAmountDrafts() {
+      const drafts = new Map();
+      document.querySelectorAll('.amount-form input[data-record-id]').forEach(input => {
+        drafts.set(input.dataset.recordId, input.value);
+      });
+      return drafts;
+    }
+
+    function renderRecords(records, drafts = new Map()) {
+      recordsBody.replaceChildren();
+      document.getElementById('totalCount').textContent = records.length;
+      document.getElementById('pendingCount').textContent = records.filter(item => item.status !== 'approved').length;
+      document.getElementById('approvedCount').textContent = records.filter(item => item.status === 'approved').length;
+      tableWrap.classList.toggle('hidden', records.length === 0);
+      emptyState.classList.toggle('hidden', records.length > 0);
+
+      records.forEach(record => {
+        const row = document.createElement('tr');
+        row.appendChild(makeCell(record.name || '未填姓名', 'name-cell'));
+        row.appendChild(makeCell(formatTime(record.created_at), 'time-cell'));
+
+        const statusCell = document.createElement('td');
+        const status = document.createElement('span');
+        const isApproved = record.status === 'approved';
+        status.className = `status ${isApproved ? 'status-approved' : 'status-pending'}`;
+        status.textContent = isApproved ? '已核定' : '待處理';
+        statusCell.appendChild(status);
+        row.appendChild(statusCell);
+
+        row.appendChild(makeCell(record.approved_amount || '—'));
+
+        const actionCell = document.createElement('td');
+        const form = document.createElement('form');
+        form.className = 'amount-form';
+        const input = document.createElement('input');
+        input.className = 'input';
+        input.type = 'text';
+        input.maxLength = 30;
+        input.placeholder = '例如：30萬';
+        input.dataset.recordId = String(record.id);
+        input.value = drafts.has(String(record.id)) ? drafts.get(String(record.id)) : (record.approved_amount || '');
+        input.setAttribute('aria-label', `${record.name || '此筆記錄'}的核定額度`);
+        const button = document.createElement('button');
+        button.className = 'btn btn-primary';
+        button.type = 'submit';
+        button.textContent = isApproved ? '更新' : '設定';
+        form.append(input, button);
+        form.addEventListener('submit', event => {
+          event.preventDefault();
+          updateAmount(record.id, input, button);
+        });
+        actionCell.appendChild(form);
+        row.appendChild(actionCell);
+        recordsBody.appendChild(row);
+      });
+    }
+
+    async function loadRecords() {
+      if (isLoading || dashboardView.classList.contains('hidden')) return;
+      isLoading = true;
+      refreshBtn.disabled = true;
+      refreshState.textContent = '正在更新資料…';
+      const drafts = collectAmountDrafts();
+      try {
+        const { data, error } = await db
+          .from('loan_inquiries')
+          .select('id, name, status, approved_amount, created_at')
+          .order('created_at', { ascending: false });
+        if (error) throw error;
+        renderRecords(data || [], drafts);
+        refreshState.textContent = `最後更新：${new Date().toLocaleTimeString('zh-TW', { hour12: false })}（每 5 秒自動刷新）`;
+      } catch (error) {
+        console.error(error);
+        refreshState.textContent = '資料載入失敗，將自動重試';
+        showToast('無法讀取資料，請確認資料庫權限設定。', true);
+      } finally {
+        isLoading = false;
+        refreshBtn.disabled = false;
+      }
+    }
+
+    async function updateAmount(id, input, button) {
+      const amount = input.value.trim();
+      if (!amount) {
+        input.focus();
+        showToast('請先輸入核定額度。', true);
+        return;
+      }
+      button.disabled = true;
+      button.textContent = '儲存中…';
+      try {
+        const { data, error } = await db
+          .from('loan_inquiries')
+          .update({ approved_amount: amount, status: 'approved' })
+          .eq('id', id)
+          .select('id');
+        if (error) throw error;
+        if (!data || data.length === 0) throw new Error('沒有資料被更新，請檢查 RLS 更新權限。');
+        showToast('額度設定成功。');
+        await loadRecords();
+      } catch (error) {
+        console.error(error);
+        showToast('設定失敗，請確認資料庫更新權限。', true);
+        button.disabled = false;
+        button.textContent = '重試';
+      }
+    }
+
+    loginForm.addEventListener('submit', async event => {
+      event.preventDefault();
+      const email = document.getElementById('emailInput').value.trim().toLowerCase();
+      const password = document.getElementById('passwordInput').value;
+      loginMessage.textContent = '';
+      if (email !== ADMIN_EMAIL) {
+        loginMessage.textContent = '此帳號沒有管理員存取權限。';
+        return;
+      }
+      loginBtn.disabled = true;
+      loginBtn.textContent = '登入中…';
+      try {
+        const { data, error } = await db.auth.signInWithPassword({ email, password });
+        if (error) throw error;
+        if (data.user?.email?.toLowerCase() !== ADMIN_EMAIL) {
+          await db.auth.signOut();
+          throw new Error('此帳號沒有管理員存取權限。');
+        }
+        setView(true);
+      } catch (error) {
+        console.error(error);
+        loginMessage.textContent = error.message === '此帳號沒有管理員存取權限。'
+          ? error.message
+          : '登入失敗，請檢查帳號或密碼。';
+      } finally {
+        loginBtn.disabled = false;
+        loginBtn.textContent = '登入後台';
+      }
+    });
+
+    refreshBtn.addEventListener('click', loadRecords);
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+      await db.auth.signOut();
+      setView(false);
+      showToast('已安全登出。');
+    });
+
+    db.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT') setView(false);
+      if (event === 'TOKEN_REFRESHED' && !session) setView(false);
+    });
+
+    (async function initialise() {
+      const { data: { session } } = await db.auth.getSession();
+      const isAdmin = session?.user?.email?.toLowerCase() === ADMIN_EMAIL;
+      if (session && !isAdmin) await db.auth.signOut();
+      setView(Boolean(isAdmin));
+    })();
+  </script>
+</body>
+</html>
