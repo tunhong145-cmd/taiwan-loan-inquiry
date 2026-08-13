@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#07172f">
+  <title>臺灣貸款服務｜額度查詢</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.2/src/regular/style.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@phosphor-icons/web@2.1.2/src/fill/style.css">
+  <style>
+    :root {
+      color-scheme: dark;
+      --navy: #07172f;
+      --navy-2: #0b2348;
+      --navy-3: #102f5f;
+      --surface: #0d274e;
+      --surface-soft: #132e54;
+      --text: #f4f6fa;
+      --muted: #9fb0c9;
+      --line: rgba(199, 213, 234, .13);
+      --gold: #e5ab42;
+      --gold-soft: #f5d38d;
+      --success: #70c899;
+      --danger: #f09d9d;
+      --radius: 18px;
+      --shadow: 0 22px 55px rgba(1, 9, 22, .34);
+    }
+
+    * { box-sizing: border-box; }
+    html { background: #041126; }
+    body {
+      margin: 0;
+      min-height: 100dvh;
+      color: var(--text);
+      background:
+        radial-gradient(circle at 50% -8%, rgba(31, 71, 132, .7), transparent 35%),
+        linear-gradient(180deg, #07172f 0%, #041126 100%);
+      font-family: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    button, input { font: inherit; }
+    button { border: 0; cursor: pointer; }
+    .hidden { display: none !important; }
+
+    .app-shell {
+      width: min(100%, 460px);
+      min-height: 100dvh;
+      margin: 0 auto;
+      padding: max(18px, env(safe-area-inset-top)) 18px calc(92px + env(safe-area-inset-bottom));
+      background:
+        radial-gradient(circle at 90% 4%, rgba(229, 171, 66, .12), transparent 18%),
+        linear-gradient(180deg, rgba(7, 23, 47, .96), rgba(4, 17, 38, .98));
+      box-shadow: 0 0 70px rgba(0, 0, 0, .25);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px; }
+    .identity { display: flex; align-items: center; gap: 12px; }
+    .avatar {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      color: #2d2109;
+      background: var(--gold);
+      font-weight: 800;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, .38);
+    }
+    .greeting { margin: 0 0 2px; color: var(--muted); font-size: 12px; }
+    .user-name { margin: 0; font-size: 19px; letter-spacing: .01em; }
+    .top-action {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      color: var(--muted);
+      background: rgba(255, 255, 255, .06);
+      border: 1px solid var(--line);
+      font-size: 20px;
+    }
+
+    .credit-card {
+      position: relative;
+      isolation: isolate;
+      overflow: hidden;
+      min-height: 205px;
+      padding: 24px;
+      border: 1px solid rgba(147, 180, 226, .18);
+      border-radius: var(--radius);
+      background: linear-gradient(145deg, #0c2752, #071b3c);
+      box-shadow: var(--shadow), inset 0 1px 0 rgba(255, 255, 255, .05);
+    }
+    .credit-card::after {
+      content: "";
+      position: absolute;
+      z-index: -1;
+      width: 210px;
+      height: 210px;
+      right: -85px;
+      top: -105px;
+      border: 36px solid rgba(229, 171, 66, .07);
+      border-radius: 50%;
+    }
+    .card-kicker { color: var(--muted); font-size: 13px; }
+    .credit-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 28px;
+      padding: 5px 10px;
+      border-radius: 999px;
+      color: var(--gold-soft);
+      background: rgba(229, 171, 66, .13);
+      font-size: 12px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .status-badge.processing { color: #b9d1ee; background: rgba(139, 174, 218, .12); }
+    .status-badge.approved { color: #9de0b9; background: rgba(74, 170, 114, .13); }
+    .status-badge.error { color: #ffc2c2; background: rgba(218, 90, 90, .14); }
+    .status-badge i { font-size: 14px; }
+    .credit-amount { margin: 8px 0 8px; color: var(--gold); font-size: clamp(34px, 10vw, 48px); line-height: 1; font-weight: 800; letter-spacing: -.025em; }
+    .credit-note { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.6; }
+    .card-divider { height: 1px; margin: 20px 0 16px; background: var(--line); }
+    .card-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+    .meta-label { display: block; margin-bottom: 6px; color: var(--muted); font-size: 12px; }
+    .meta-value { font-size: 15px; font-weight: 750; }
+
+    .section { margin-top: 26px; }
+    .section-title { margin: 0 0 14px; font-size: 17px; }
+    .actions { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+    .quick-action {
+      padding: 0;
+      color: var(--muted);
+      background: transparent;
+      text-align: center;
+    }
+    .quick-action:active .action-icon { transform: scale(.96); }
+    .action-icon {
+      width: 54px;
+      height: 54px;
+      display: grid;
+      place-items: center;
+      margin: 0 auto 8px;
+      border-radius: 16px;
+      color: var(--gold);
+      background: rgba(229, 171, 66, .1);
+      border: 1px solid rgba(229, 171, 66, .08);
+      font-size: 23px;
+      transition: transform .18s ease;
+    }
+    .quick-action:nth-child(2) .action-icon,
+    .quick-action:nth-child(4) .action-icon { color: #9fb7d8; background: rgba(130, 164, 210, .1); border-color: rgba(130, 164, 210, .08); }
+    .quick-label { font-size: 12px; line-height: 1.35; }
+
+    .query-panel {
+      margin-top: 22px;
+      padding: 20px;
+      border-radius: var(--radius);
+      background: rgba(13, 39, 78, .72);
+      border: 1px solid var(--line);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, .035);
+    }
+    .query-panel h2 { margin: 0 0 6px; font-size: 18px; }
+    .query-panel > p { margin: 0 0 18px; color: var(--muted); font-size: 13px; line-height: 1.6; }
+    .field-label { display: block; margin-bottom: 8px; color: #d6dfed; font-size: 13px; font-weight: 700; }
+    .input-wrap { position: relative; }
+    .input-wrap i { position: absolute; top: 50%; left: 15px; color: #7891b5; font-size: 20px; transform: translateY(-50%); pointer-events: none; }
+    .name-input {
+      width: 100%;
+      min-height: 52px;
+      padding: 13px 16px 13px 46px;
+      border: 1px solid rgba(166, 189, 220, .18);
+      border-radius: 14px;
+      outline: 0;
+      color: var(--text);
+      background: rgba(2, 15, 34, .46);
+    }
+    .name-input::placeholder { color: #8195b2; }
+    .name-input:focus { border-color: rgba(229, 171, 66, .78); box-shadow: 0 0 0 3px rgba(229, 171, 66, .12); }
+    .submit-btn {
+      width: 100%;
+      min-height: 52px;
+      margin-top: 14px;
+      border-radius: 14px;
+      color: #241a07;
+      background: var(--gold);
+      font-weight: 800;
+      box-shadow: 0 10px 24px rgba(229, 171, 66, .16);
+      transition: transform .18s ease, opacity .18s ease;
+    }
+    .submit-btn:active { transform: scale(.985); }
+    .submit-btn:disabled { cursor: wait; opacity: .64; }
+    .form-message { min-height: 20px; margin: 10px 0 0; color: var(--danger); font-size: 12px; line-height: 1.5; }
+
+    .progress-state { padding: 10px 0 2px; text-align: center; }
+    .loader {
+      width: 54px;
+      height: 54px;
+      display: grid;
+      place-items: center;
+      margin: 0 auto 14px;
+      border-radius: 16px;
+      color: var(--gold);
+      background: rgba(229, 171, 66, .1);
+      font-size: 25px;
+    }
+    .loader i { animation: pulse 1.2s ease-in-out infinite; }
+    .progress-state strong { display: block; font-size: 17px; }
+    .progress-state p { margin: 7px 0 0; color: var(--muted); font-size: 13px; }
+
+    .result-state { padding-top: 2px; }
+    .result-row { display: flex; align-items: center; gap: 13px; }
+    .result-icon {
+      width: 48px;
+      height: 48px;
+      display: grid;
+      flex: 0 0 auto;
+      place-items: center;
+      border-radius: 15px;
+      color: #9de0b9;
+      background: rgba(74, 170, 114, .13);
+      font-size: 24px;
+    }
+    .result-state h2 { margin: 0 0 3px; }
+    .result-state p { margin: 0; }
+    .reset-btn {
+      width: 100%;
+      min-height: 46px;
+      margin-top: 18px;
+      border-radius: 14px;
+      color: #dbe5f3;
+      background: rgba(255, 255, 255, .07);
+      border: 1px solid var(--line);
+      font-weight: 700;
+    }
+
+    .service-list { display: grid; gap: 10px; }
+    .service-item {
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      align-items: center;
+      gap: 13px;
+      padding: 15px;
+      border-radius: 16px;
+      color: inherit;
+      background: rgba(13, 39, 78, .5);
+      border: 1px solid var(--line);
+      text-decoration: none;
+    }
+    .service-icon {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      border-radius: 14px;
+      color: var(--gold);
+      background: rgba(229, 171, 66, .1);
+      font-size: 21px;
+    }
+    .service-item strong { display: block; margin-bottom: 3px; font-size: 14px; }
+    .service-item span { color: var(--muted); font-size: 12px; }
+    .service-item > i { color: #7189aa; }
+
+    .bottom-nav {
+      position: fixed;
+      z-index: 10;
+      right: 50%;
+      bottom: 0;
+      width: min(100%, 460px);
+      min-height: calc(70px + env(safe-area-inset-bottom));
+      padding: 9px 16px env(safe-area-inset-bottom);
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      transform: translateX(50%);
+      background: rgba(6, 20, 43, .94);
+      border-top: 1px solid var(--line);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+    }
+    .nav-item {
+      display: grid;
+      justify-items: center;
+      align-content: center;
+      gap: 4px;
+      padding: 0;
+      color: #7f93af;
+      background: transparent;
+      font-size: 11px;
+    }
+    .nav-item i { font-size: 22px; }
+    .nav-item.active { color: var(--gold); }
+
+    @keyframes pulse { 50% { transform: scale(.82); opacity: .55; } }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; animation: none !important; transition: none !important; }
+    }
+    @media (min-width: 700px) {
+      body { padding: 28px 0; }
+      .app-shell { min-height: calc(100dvh - 56px); border: 1px solid rgba(199, 213, 234, .12); border-radius: 28px; }
+      .bottom-nav { bottom: 28px; border: 1px solid var(--line); border-radius: 0 0 28px 28px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <div class="identity">
+        <div class="avatar" aria-hidden="true">貸</div>
+        <div>
+          <p class="greeting">安心額度查詢</p>
+          <h1 class="user-name" id="userName">您好，歡迎使用</h1>
+        </div>
+      </div>
+      <button class="top-action" type="button" aria-label="安全保護資訊" onclick="showSecurityInfo()"><i class="ph ph-shield-check"></i></button>
+    </header>
+
+    <section class="credit-card" aria-labelledby="creditTitle">
+      <div class="credit-head">
+        <div>
+          <div class="card-kicker" id="creditTitle">本次核定額度</div>
+          <div class="credit-amount" id="creditAmount">待查詢</div>
+        </div>
+        <div class="status-badge" id="statusBadge"><i class="ph ph-magnifying-glass"></i><span>尚未送出</span></div>
+      </div>
+      <p class="credit-note" id="creditNote">輸入姓名送出後，系統會持續查詢最新核定結果。</p>
+      <div class="card-divider"></div>
+      <div class="card-meta">
+        <div><span class="meta-label">查詢方式</span><strong class="meta-value">線上即時查詢</strong></div>
+        <div><span class="meta-label">更新頻率</span><strong class="meta-value">每 3 秒</strong></div>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="quickTitle">
+      <h2 class="section-title" id="quickTitle">快捷服務</h2>
+      <div class="actions">
+        <button class="quick-action" type="button" onclick="focusQuery()"><span class="action-icon"><i class="ph ph-lightning"></i></span><span class="quick-label">額度查詢</span></button>
+        <button class="quick-action" type="button" onclick="showInfo('額度核定後會直接顯示在上方卡片。')"><span class="action-icon"><i class="ph ph-chart-bar"></i></span><span class="quick-label">查詢進度</span></button>
+        <button class="quick-action" type="button" onclick="showInfo('本頁僅提供初步額度查詢，實際條件以後續審核為準。')"><span class="action-icon"><i class="ph ph-file-text"></i></span><span class="quick-label">服務說明</span></button>
+        <button class="quick-action" type="button" onclick="showSecurityInfo()"><span class="action-icon"><i class="ph ph-lock-key"></i></span><span class="quick-label">安全中心</span></button>
+      </div>
+    </section>
+
+    <section class="query-panel" id="queryPanel">
+      <div id="formState">
+        <h2>查詢貸款額度</h2>
+        <p>請填寫真實姓名，送出後請保留此頁等待核定結果。</p>
+        <label class="field-label" for="nameInput">真實姓名</label>
+        <div class="input-wrap">
+          <i class="ph ph-user"></i>
+          <input class="name-input" id="nameInput" type="text" maxlength="40" placeholder="請輸入您的姓名" autocomplete="name">
+        </div>
+        <button class="submit-btn" id="submitBtn" type="button" onclick="submitInquiry()">開始查詢</button>
+        <p class="form-message" id="formMessage" role="alert" aria-live="polite"></p>
+      </div>
+
+      <div class="progress-state hidden" id="progressState" aria-live="polite">
+        <div class="loader"><i class="ph ph-buildings"></i></div>
+        <strong>資料核算中</strong>
+        <p>已等待 <span id="timerCount">0</span> 秒，請保持頁面開啟。</p>
+      </div>
+
+      <div class="result-state hidden" id="resultState" aria-live="polite">
+        <div class="result-row">
+          <div class="result-icon"><i class="ph-fill ph-check-circle"></i></div>
+          <div><h2>額度已核定</h2><p>核定結果已同步至上方額度卡。</p></div>
+        </div>
+        <button class="reset-btn" type="button" onclick="resetQuery()">查詢另一位申請人</button>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="serviceTitle">
+      <h2 class="section-title" id="serviceTitle">服務提醒</h2>
+      <div class="service-list">
+        <div class="service-item"><span class="service-icon"><i class="ph ph-clock-countdown"></i></span><div><strong>請保留此頁</strong><span>額度核定後會自動顯示，無需重複送出。</span></div><i class="ph ph-caret-right"></i></div>
+        <div class="service-item"><span class="service-icon"><i class="ph ph-shield-check"></i></span><div><strong>資料安全</strong><span>頁面僅提交本次查詢所需的姓名資料。</span></div><i class="ph ph-caret-right"></i></div>
+      </div>
+    </section>
+  </main>
+
+  <nav class="bottom-nav" aria-label="主要功能">
+    <button class="nav-item active" type="button" onclick="window.scrollTo({top:0,behavior:'smooth'})"><i class="ph-fill ph-house"></i><span>首頁</span></button>
+    <button class="nav-item" type="button" onclick="focusQuery()"><i class="ph ph-magnifying-glass"></i><span>查詢</span></button>
+    <button class="nav-item" type="button" onclick="showInfo('核定後會在首頁額度卡顯示結果。')"><i class="ph ph-wallet"></i><span>額度</span></button>
+    <button class="nav-item" type="button" onclick="showSecurityInfo()"><i class="ph ph-user-circle"></i><span>我的</span></button>
+  </nav>
+
+  <script>
+    const SUPABASE_URL = 'https://ybrbkqpbbprxeknswpqq.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_7_XHFZWaHVA2y7LiJgo2IQ_DEnS_25p';
+    const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    let currentInquiryId = null;
+    let timerInterval = null;
+    let pollInterval = null;
+    let seconds = 0;
+
+    function setStatus(kind, label, icon) {
+      const badge = document.getElementById('statusBadge');
+      badge.className = `status-badge ${kind || ''}`.trim();
+      badge.innerHTML = `<i class="ph ${icon}"></i><span>${label}</span>`;
+    }
+
+    function focusQuery() {
+      document.getElementById('queryPanel').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      setTimeout(() => document.getElementById('nameInput')?.focus(), 350);
+    }
+
+    function showInfo(message) { window.alert(message); }
+    function showSecurityInfo() { showInfo('本頁採用加密連線，請勿向他人提供您的管理員帳號或密碼。'); }
+
+    async function submitInquiry() {
+      const input = document.getElementById('nameInput');
+      const name = input.value.trim();
+      const message = document.getElementById('formMessage');
+      const button = document.getElementById('submitBtn');
+      message.textContent = '';
+      if (!name) {
+        message.textContent = '請先輸入您的姓名。';
+        input.focus();
+        return;
+      }
+
+      button.disabled = true;
+      button.textContent = '正在送出';
+      try {
+        const { data, error } = await db.from('loan_inquiries').insert({ name }).select('id').single();
+        if (error) throw error;
+        currentInquiryId = data.id;
+        document.getElementById('userName').textContent = `${name}，您好`;
+        document.getElementById('formState').classList.add('hidden');
+        document.getElementById('progressState').classList.remove('hidden');
+        document.getElementById('creditAmount').textContent = '核算中';
+        document.getElementById('creditNote').textContent = '系統正在等待管理端完成本次額度核定。';
+        setStatus('processing', '資料核算中', 'ph-clock-countdown');
+        seconds = 0;
+        timerInterval = setInterval(() => {
+          seconds += 1;
+          document.getElementById('timerCount').textContent = seconds;
+        }, 1000);
+        pollInterval = setInterval(checkResult, 3000);
+      } catch (error) {
+        console.error(error);
+        message.textContent = '目前無法送出查詢，請稍後再試。';
+        setStatus('error', '送出失敗', 'ph-warning-circle');
+        button.disabled = false;
+        button.textContent = '重新送出';
+      }
+    }
+
+    async function checkResult() {
+      if (!currentInquiryId) return;
+      try {
+        const { data, error } = await db.from('loan_inquiries').select('status, approved_amount').eq('id', currentInquiryId).single();
+        if (error || data?.status !== 'approved' || !data.approved_amount) return;
+        clearInterval(pollInterval);
+        clearInterval(timerInterval);
+        document.getElementById('progressState').classList.add('hidden');
+        document.getElementById('resultState').classList.remove('hidden');
+        document.getElementById('creditAmount').textContent = data.approved_amount;
+        document.getElementById('creditNote').textContent = '以上為本次初步核定額度，實際條件以最終審核為準。';
+        setStatus('approved', '已核定', 'ph-check-circle');
+      } catch (error) {
+        console.error(error);
+      }
+    }
+
+    function resetQuery() {
+      clearInterval(pollInterval);
+      clearInterval(timerInterval);
+      currentInquiryId = null;
+      seconds = 0;
+      document.getElementById('nameInput').value = '';
+      document.getElementById('timerCount').textContent = '0';
+      document.getElementById('submitBtn').disabled = false;
+      document.getElementById('submitBtn').textContent = '開始查詢';
+      document.getElementById('formMessage').textContent = '';
+      document.getElementById('resultState').classList.add('hidden');
+      document.getElementById('progressState').classList.add('hidden');
+      document.getElementById('formState').classList.remove('hidden');
+      document.getElementById('userName').textContent = '您好，歡迎使用';
+      document.getElementById('creditAmount').textContent = '待查詢';
+      document.getElementById('creditNote').textContent = '輸入姓名送出後，系統會持續查詢最新核定結果。';
+      setStatus('', '尚未送出', 'ph-magnifying-glass');
+      focusQuery();
+    }
+  </script>
+</body>
+</html>
