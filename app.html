@@ -48,7 +48,7 @@
       width: min(100%, 460px);
       min-height: 100dvh;
       margin: 0 auto;
-      padding: max(18px, env(safe-area-inset-top)) 18px calc(92px + env(safe-area-inset-bottom));
+      padding: max(18px, env(safe-area-inset-top)) 18px calc(28px + env(safe-area-inset-bottom));
       background:
         radial-gradient(circle at 90% 4%, rgba(229, 171, 66, .12), transparent 18%),
         linear-gradient(180deg, rgba(7, 23, 47, .96), rgba(4, 17, 38, .98));
@@ -266,34 +266,28 @@
     .service-item span { color: var(--muted); font-size: 12px; }
     .service-item > i { color: #7189aa; }
 
-    .bottom-nav {
-      position: fixed;
-      z-index: 10;
-      right: 50%;
-      bottom: 0;
-      width: min(100%, 460px);
-      min-height: calc(70px + env(safe-area-inset-bottom));
-      padding: 9px 16px env(safe-area-inset-bottom);
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      transform: translateX(50%);
-      background: rgba(6, 20, 43, .94);
+    .web-footer {
+      margin-top: 28px;
+      padding-top: 20px;
       border-top: 1px solid var(--line);
-      backdrop-filter: blur(18px);
-      -webkit-backdrop-filter: blur(18px);
+      color: var(--muted);
+      text-align: center;
     }
-    .nav-item {
-      display: grid;
-      justify-items: center;
-      align-content: center;
-      gap: 4px;
-      padding: 0;
-      color: #7f93af;
-      background: transparent;
-      font-size: 11px;
+    .footer-notes {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 10px 18px;
     }
-    .nav-item i { font-size: 22px; }
-    .nav-item.active { color: var(--gold); }
+    .footer-note {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+    }
+    .footer-note i { color: var(--gold); font-size: 15px; }
+    .copyright { margin: 14px 0 0; color: #7185a3; font-size: 11px; }
 
     @keyframes pulse { 50% { transform: scale(.82); opacity: .55; } }
     @media (prefers-reduced-motion: reduce) {
@@ -302,7 +296,6 @@
     @media (min-width: 700px) {
       body { padding: 28px 0; }
       .app-shell { min-height: calc(100dvh - 56px); border: 1px solid rgba(199, 213, 234, .12); border-radius: 28px; }
-      .bottom-nav { bottom: 28px; border: 1px solid var(--line); border-radius: 0 0 28px 28px; }
     }
   </style>
 </head>
@@ -380,14 +373,15 @@
         <div class="service-item"><span class="service-icon"><i class="ph ph-shield-check"></i></span><div><strong>資料安全</strong><span>頁面僅提交本次查詢所需的姓名資料。</span></div><i class="ph ph-caret-right"></i></div>
       </div>
     </section>
-  </main>
 
-  <nav class="bottom-nav" aria-label="主要功能">
-    <button class="nav-item active" type="button" onclick="window.scrollTo({top:0,behavior:'smooth'})"><i class="ph-fill ph-house"></i><span>首頁</span></button>
-    <button class="nav-item" type="button" onclick="focusQuery()"><i class="ph ph-magnifying-glass"></i><span>查詢</span></button>
-    <button class="nav-item" type="button" onclick="showInfo('核定後會在首頁額度卡顯示結果。')"><i class="ph ph-wallet"></i><span>額度</span></button>
-    <button class="nav-item" type="button" onclick="showSecurityInfo()"><i class="ph ph-user-circle"></i><span>我的</span></button>
-  </nav>
+    <footer class="web-footer">
+      <div class="footer-notes">
+        <span class="footer-note"><i class="ph ph-lock-key"></i>資料採加密傳輸</span>
+        <span class="footer-note"><i class="ph ph-info"></i>額度僅供初步評估</span>
+      </div>
+      <p class="copyright">© 2026 臺灣金融貸款服務</p>
+    </footer>
+  </main>
 
   <script>
     const SUPABASE_URL = 'https://ybrbkqpbbprxeknswpqq.supabase.co';
