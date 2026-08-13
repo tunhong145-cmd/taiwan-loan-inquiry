@@ -213,7 +213,7 @@
       <div class="header-inner">
         <div class="title-group">
           <h1>貸款額度查詢管理</h1>
-          <p>查詢記錄每 5 秒自動更新</p>
+          <p>頁面顯示時每 5 秒自動更新</p>
         </div>
         <div class="header-actions">
           <button id="refreshBtn" class="btn" type="button">立即刷新</button>
@@ -241,7 +241,7 @@
       <section class="panel">
         <div class="panel-head">
           <div>
-            <h2>全部查詢記錄</h2>
+            <h2>最新查詢記錄</h2>
             <div id="refreshState" class="refresh-state" aria-live="polite">正在載入資料…</div>
           </div>
         </div>
@@ -283,19 +283,26 @@
     const refreshState = document.getElementById('refreshState');
     const refreshBtn = document.getElementById('refreshBtn');
     let refreshTimer = null;
+    let statsTimer = null;
     let toastTimer = null;
     let isLoading = false;
+    let isStatsLoading = false;
 
     function setView(isLoggedIn) {
       loginView.classList.toggle('hidden', isLoggedIn);
       dashboardView.classList.toggle('hidden', !isLoggedIn);
       if (isLoggedIn) {
-        loadRecords();
         clearInterval(refreshTimer);
+        clearInterval(statsTimer);
+        loadRecords();
+        loadStats();
         refreshTimer = setInterval(loadRecords, 5000);
+        statsTimer = setInterval(loadStats, 60000);
       } else {
         clearInterval(refreshTimer);
+        clearInterval(statsTimer);
         refreshTimer = null;
+        statsTimer = null;
         recordsBody.replaceChildren();
         document.getElementById('passwordInput').value = '';
       }
@@ -337,9 +344,6 @@
 
     function renderRecords(records, drafts = new Map()) {
       recordsBody.replaceChildren();
-      document.getElementById('totalCount').textContent = records.length;
-      document.getElementById('pendingCount').textContent = records.filter(item => item.status !== 'approved').length;
-      document.getElementById('approvedCount').textContent = records.filter(item => item.status === 'approved').length;
       tableWrap.classList.toggle('hidden', records.length === 0);
       emptyState.classList.toggle('hidden', records.length > 0);
 
@@ -385,7 +389,7 @@
     }
 
     async function loadRecords() {
-      if (isLoading || dashboardView.classList.contains('hidden')) return;
+      if (isLoading || document.hidden || dashboardView.classList.contains('hidden')) return;
       isLoading = true;
       refreshBtn.disabled = true;
       refreshState.textContent = '正在更新資料…';
@@ -394,10 +398,11 @@
         const { data, error } = await db
           .from('loan_inquiries')
           .select('id, name, status, approved_amount, created_at')
-          .order('created_at', { ascending: false });
+          .order('created_at', { ascending: false })
+          .limit(100);
         if (error) throw error;
         renderRecords(data || [], drafts);
-        refreshState.textContent = `最後更新：${new Date().toLocaleTimeString('zh-TW', { hour12: false })}（每 5 秒自動刷新）`;
+        refreshState.textContent = `最後更新：${new Date().toLocaleTimeString('zh-TW', { hour12: false })}（顯示最新 100 筆）`;
       } catch (error) {
         console.error(error);
         refreshState.textContent = '資料載入失敗，將自動重試';
@@ -406,6 +411,31 @@
         isLoading = false;
         refreshBtn.disabled = false;
       }
+    }
+
+    async function loadStats() {
+      if (isStatsLoading || document.hidden || dashboardView.classList.contains('hidden')) return;
+      isStatsLoading = true;
+      try {
+        const [totalResult, pendingResult, approvedResult] = await Promise.all([
+          db.from('loan_inquiries').select('id', { count: 'exact', head: true }),
+          db.from('loan_inquiries').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+          db.from('loan_inquiries').select('id', { count: 'exact', head: true }).eq('status', 'approved')
+        ]);
+        const error = totalResult.error || pendingResult.error || approvedResult.error;
+        if (error) throw error;
+        document.getElementById('totalCount').textContent = totalResult.count ?? 0;
+        document.getElementById('pendingCount').textContent = pendingResult.count ?? 0;
+        document.getElementById('approvedCount').textContent = approvedResult.count ?? 0;
+      } catch (error) {
+        console.error(error);
+      } finally {
+        isStatsLoading = false;
+      }
+    }
+
+    async function refreshAll() {
+      await Promise.all([loadRecords(), loadStats()]);
     }
 
     async function updateAmount(id, input, button) {
@@ -426,7 +456,7 @@
         if (error) throw error;
         if (!data || data.length === 0) throw new Error('沒有資料被更新，請檢查 RLS 更新權限。');
         showToast('額度設定成功。');
-        await loadRecords();
+        await refreshAll();
       } catch (error) {
         console.error(error);
         showToast('設定失敗，請確認資料庫更新權限。', true);
@@ -465,7 +495,10 @@
       }
     });
 
-    refreshBtn.addEventListener('click', loadRecords);
+    refreshBtn.addEventListener('click', refreshAll);
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden && !dashboardView.classList.contains('hidden')) refreshAll();
+    });
     document.getElementById('logoutBtn').addEventListener('click', async () => {
       await db.auth.signOut();
       setView(false);
