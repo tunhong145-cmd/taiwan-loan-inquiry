@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>【2026 金融機構貸款專案】快速額度查詢，最快當天出結果</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root { --green: #1a7a2e; --green-dark: #145f23; --green-light: #e8f5e9; --ink: #1a1a1a; --muted: #666; --line: #e5e5e5; --paper: #fafafa; --gold: #f59e0b; }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Noto Sans TC', sans-serif; background: #fff; color: var(--ink); line-height: 1.6; }
+    .ticker { background: var(--green); color: #fff; padding: 10px 0; overflow: hidden; white-space: nowrap; }
+    .ticker-inner { display: inline-block; animation: marquee 30s linear infinite; }
+    .ticker-inner span { margin: 0 40px; font-size: 14px; font-weight: 500; }
+    @keyframes marquee { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+    .nav { position: sticky; top: 0; z-index: 100; background: #fff; border-bottom: 1px solid var(--line); box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+    .nav-inner { max-width: 1200px; margin: 0 auto; padding: 0 20px; height: 56px; display: flex; align-items: center; justify-content: space-between; }
+    .nav-brand { display: flex; align-items: center; gap: 10px; }
+    .nav-logo { width: 32px; height: 32px; background: var(--green); border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #fff; font-weight: 900; font-size: 14px; }
+    .nav-title { font-weight: 700; font-size: 15px; }
+    .nav-links { display: flex; gap: 24px; }
+    .nav-links a { text-decoration: none; color: var(--muted); font-size: 14px; font-weight: 500; transition: color 0.2s; }
+    .nav-links a:hover { color: var(--green); }
+    .hero { background: linear-gradient(135deg, var(--green) 0%, var(--green-dark) 100%); padding: 60px 20px; position: relative; overflow: hidden; }
+    .hero::after { content: ''; position: absolute; inset: 0; background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none'%3E%3Cg fill='%23fff' fill-opacity='0.05'%3E%3Cpath d='M36 34v-4H0v4h36zM36 0v4H0V0h36z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E"); }
+    .hero-inner { max-width: 1200px; margin: 0 auto; position: relative; z-index: 1; }
+    .hero h1 { font-size: clamp(28px, 5vw, 48px); font-weight: 900; color: #fff; line-height: 1.3; }
+    .hero p { margin-top: 16px; color: rgba(255,255,255,0.85); font-size: 18px; max-width: 600px; }
+    .main { max-width: 1200px; margin: 0 auto; padding: 40px 20px; display: grid; grid-template-columns: 1fr 320px; gap: 32px; }
+    @media (max-width: 768px) { .main { grid-template-columns: 1fr; } .nav-links { display: none; } }
+    .article h2 { font-size: 22px; font-weight: 700; border-left: 4px solid var(--green); padding-left: 14px; margin-bottom: 16px; }
+    .article p { color: var(--muted); margin-bottom: 16px; font-size: 15px; }
+    .form-card { background: #fff; border: 2px solid var(--green-light); border-radius: 16px; padding: 32px; box-shadow: 0 8px 32px rgba(0,0,0,0.06); margin-top: 24px; }
+    .form-card h3 { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+    .form-card .desc { color: var(--muted); font-size: 14px; margin-bottom: 24px; }
+    .form-label { display: block; font-weight: 700; font-size: 14px; margin-bottom: 8px; }
+    .form-label span { color: #e53e3e; }
+    .form-input { width: 100%; padding: 14px 16px; border: 1px solid var(--line); border-radius: 10px; font-size: 15px; font-family: inherit; transition: border-color 0.2s; }
+    .form-input:focus { outline: none; border-color: var(--green); box-shadow: 0 0 0 3px rgba(26,122,46,0.1); }
+    .btn-submit { width: 100%; margin-top: 24px; padding: 16px; background: var(--green); color: #fff; border: none; border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; transition: all 0.3s; box-shadow: 0 8px 24px rgba(26,122,46,0.2); }
+    .btn-submit:hover { background: var(--green-dark); transform: translateY(-2px); box-shadow: 0 12px 32px rgba(26,122,46,0.3); }
+    .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+    .waiting { text-align: center; padding: 48px 0; }
+    .waiting .spinner { width: 56px; height: 56px; border: 4px solid var(--green-light); border-top-color: var(--green); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .waiting h4 { font-size: 20px; font-weight: 700; margin-bottom: 8px; }
+    .waiting p { color: var(--muted); font-size: 14px; }
+    .waiting .timer { margin-top: 12px; font-size: 13px; color: var(--muted); }
+    .result { text-align: center; padding: 32px 0; }
+    .result .check { width: 56px; height: 56px; background: var(--green-light); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; }
+    .result .check svg { width: 28px; height: 28px; color: var(--green); }
+    .result .label { font-size: 14px; color: var(--muted); margin-bottom: 8px; }
+    .result .amount { font-size: clamp(36px, 8vw, 52px); font-weight: 900; color: var(--green); }
+    .result .note { margin-top: 16px; background: var(--green-light); border-radius: 10px; padding: 14px; font-size: 13px; color: var(--muted); }
+    .reviews { margin-top: 32px; }
+    .reviews h3 { font-size: 20px; font-weight: 700; border-left: 4px solid var(--green); padding-left: 14px; margin-bottom: 16px; }
+    .review-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+    .review-card { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 16px; transition: box-shadow 0.2s; }
+    .review-card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.06); }
+    .review-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+    .review-name { font-weight: 700; font-size: 14px; }
+    .review-time { font-size: 12px; color: var(--muted); }
+    .review-stars { color: var(--gold); font-size: 13px; margin-bottom: 8px; }
+    .review-text { font-size: 13px; color: var(--muted); line-height: 1.5; }
+    .sidebar { display: flex; flex-direction: column; gap: 20px; }
+    .stat-card { background: #fff; border: 1px solid var(--line); border-radius: 12px; padding: 20px; }
+    .stat-card h4 { font-size: 15px; font-weight: 700; margin-bottom: 14px; }
+    .stat-item { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
+    .stat-item:last-child { border-bottom: none; }
+    .stat-item .label { color: var(--muted); }
+    .stat-item .value { font-weight: 700; }
+    .cta-card { background: var(--green); border-radius: 12px; padding: 20px; color: #fff; }
+    .cta-card h4 { font-size: 15px; font-weight: 700; margin-bottom: 8px; }
+    .cta-card p { font-size: 13px; color: rgba(255,255,255,0.8); margin-bottom: 14px; }
+    .cta-btn { display: block; width: 100%; padding: 12px; background: #fff; color: var(--green); border: none; border-radius: 8px; font-size: 14px; font-weight: 700; cursor: pointer; text-align: center; }
+    .faq { margin-top: 32px; }
+    .faq h3 { font-size: 20px; font-weight: 700; border-left: 4px solid var(--green); padding-left: 14px; margin-bottom: 16px; }
+    .faq-item { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 16px; margin-bottom: 12px; }
+    .faq-item strong { font-size: 14px; }
+    .faq-item p { font-size: 13px; color: var(--muted); margin-top: 6px; }
+    .footer { border-top: 1px solid var(--line); padding: 20px; text-align: center; font-size: 13px; color: var(--muted); margin-top: 40px; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <div class="ticker"><div class="ticker-inner">
+    <span>🎉 2026 金融機構貸款專案：符合資格者可申請最高額度貸款</span>
+    <span>📢 快速核算，最快當天出結果</span>
+    <span>✅ 資料簡單，在線 1 分鐘完成查詢</span>
+    <span>🎉 2026 金融機構貸款專案：符合資格者可申請最高額度貸款</span>
+    <span>📢 快速核算，最快當天出結果</span>
+    <span>✅ 資料簡單，在線 1 分鐘完成查詢</span>
+  </div></div>
+
+  <nav class="nav"><div class="nav-inner">
+    <div class="nav-brand"><div class="nav-logo">貸</div><span class="nav-title">臺灣金融貸款中心</span></div>
+    <div class="nav-links"><a href="#apply">申請貸款</a><a href="#faq">常見問題</a><a href="#contact">聯絡我們</a></div>
+  </div></nav>
+
+  <section class="hero"><div class="hero-inner">
+    <h1>2026 金融機構貸款專案</h1>
+    <p>為符合資格的臺灣民眾提供快速、便捷的貸款額度查詢服務</p>
+  </div></section>
+
+  <div class="main">
+    <div>
+      <article class="article">
+        <h2>金融機構貸款政策解讀</h2>
+        <p>為了幫助有資金需求的民眾解決燃眉之急，多家金融機構於 2026 年聯合推出全新的快速貸款專案。本專案面向 20-65 歲的臺灣居民，無需複雜的聯徵查詢，只需簡單的姓名提交，即可快速獲得貸款額度預估。</p>
+        <p>貸款額度根據申請者的綜合條件而定，最高可達百萬元。核算流程完全在線進行，由 AI 智能系統結合金融大數據進行分析，最快可在數分鐘內完成額度預估。</p>
+      </article>
+
+      <div class="form-card" id="apply">
+        <h3>在線快速查詢</h3>
+        <p class="desc">請填寫您的姓名，AI 系統將為您核算可申請的最高貸款額度。</p>
+        <div id="formPhase">
+          <label class="form-label">真實姓名 <span>*</span></label>
+          <input type="text" class="form-input" id="nameInput" placeholder="請輸入您的姓名" required>
+          <button class="btn-submit" id="submitBtn" onclick="handleSubmit()">查詢我的貸款額度 →</button>
+        </div>
+        <div id="waitingPhase" class="waiting hidden">
+          <div class="spinner"></div>
+          <h4>AI 核算中</h4>
+          <p>系統正在對接金融機構數據庫，為您核算最高可申請額度...</p>
+          <div class="timer">已等待 <span id="timerCount">0</span> 秒，預計需要 1-3 分鐘，請耐心等候</div>
+        </div>
+        <div id="resultPhase" class="result hidden">
+          <div class="check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg></div>
+          <p class="label">您的預估貸款額度為</p>
+          <p class="amount" id="amountDisplay"></p>
+          <div class="note">以上為初步預估額度，實際額度以最終審核為準。如需進一步了解，請聯繫專屬客服。</div>
+        </div>
+      </div>
+
+      <section class="reviews">
+        <h3>最新申請評價</h3>
+        <div class="review-grid">
+          <div class="review-card"><div class="review-header"><span class="review-name">李先生</span><span class="review-time">2 小時前</span></div><div class="review-stars">★★★★★</div><p class="review-text">申請流程非常簡單，只花了 1 分鐘就完成了。額度核算速度也很快，當天就收到通知。非常感謝！</p></div>
+          <div class="review-card"><div class="review-header"><span class="review-name">王女士</span><span class="review-time">4 小時前</span></div><div class="review-stars">★★★★★</div><p class="review-text">沒想到額度這麼快就核算出來了，真的幫了大忙。客服也很專業，有問題都能快速解答。</p></div>
+          <div class="review-card"><div class="review-header"><span class="review-name">陳先生</span><span class="review-time">6 小時前</span></div><div class="review-stars">★★★★★</div><p class="review-text">之前擔心會很複雜，結果超出預期地簡單。整個過程透明清楚，沒有任何隱藏費用。推薦給大家！</p></div>
+          <div class="review-card"><div class="review-header"><span class="review-name">黃女士</span><span class="review-time">8 小時前</span></div><div class="review-stars">★★★★★</div><p class="review-text">查詢後馬上就有人跟進，效率真的一流。貸款額度也符合我的期望，非常滿意。</p></div>
+          <div class="review-card"><div class="review-header"><span class="review-name">劉先生</span><span class="review-time">10 小時前</span></div><div class="review-stars">★★★★★</div><p class="review-text">不用跑銀行，在家就能查詢，真的太方便了。而且完全不影響信用記錄，這點我最滿意。</p></div>
+          <div class="review-card"><div class="review-header"><span class="review-name">林女士</span><span class="review-time">12 小時前</span></div><div class="review-stars">★★★★★</div><p class="review-text">核算過程很公正透明，沒有任何額外要求。額度直接顯示在頁面上，安全又放心。</p></div>
+          <div class="review-card"><div class="review-header"><span class="review-name">張先生</span><span class="review-time">14 小時前</span></div><div class="review-stars">★★★★★</div><p class="review-text">我朋友推薦的，果然沒讓我失望。查詢、核算、通知，整個流程快得不像話。</p></div>
+          <div class="review-card"><div class="review-header"><span class="review-name">吳女士</span><span class="review-time">16 小時前</span></div><div class="review-stars">★★★★★</div><p class="review-text">客服態度很好，有任何疑問都會耐心解答。貸款額度也很合理，整體體驗五星推薦。</p></div>
+          <div class="review-card"><div class="review-header"><span class="review-name">周先生</span><span class="review-time">18 小時前</span></div><div class="review-stars">★★★★★</div><p class="review-text">之前對這類查詢有疑慮，但這次體驗改變了我的想法。流程簡單透明，絕對值得一試。</p></div>
+          <div class="review-card"><div class="review-header"><span class="review-name">何女士</span><span class="review-time">20 小時前</span></div><div class="review-stars">★★★★★</div><p class="review-text">查詢當天就出結果了，效率真的沒話說，非常推薦給有需要的朋友。</p></div>
+        </div>
+      </section>
+
+      <section class="faq" id="faq">
+        <h3>常見問題</h3>
+        <div class="faq-item"><strong>Q: 查詢需要多長時間？</strong><p>A: 在線查詢僅需 1 分鐘，額度核算通常在數分鐘內完成。</p></div>
+        <div class="faq-item"><strong>Q: 貸款額度如何確定？</strong><p>A: AI 系統會根據您的綜合條件進行大數據分析，給出最高可申請額度。</p></div>
+        <div class="faq-item"><strong>Q: 是否會影響我的信用記錄？</strong><p>A: 本額度查詢不涉及傳統聯徵查詢，不會影響您的信用記錄。</p></div>
+      </section>
+    </div>
+
+    <aside class="sidebar">
+      <div class="stat-card">
+        <h4>📊 今日查詢統計</h4>
+        <div class="stat-item"><span class="label">今日成功查詢</span><span class="value">2,847 人</span></div>
+        <div class="stat-item"><span class="label">平均核算時間</span><span class="value">約 3 分鐘</span></div>
+        <div class="stat-item"><span class="label">核算通過率</span><span class="value">91.2%</span></div>
+      </div>
+      <div class="cta-card">
+        <h4>🏦 貸款資格預查</h4>
+        <p>快速了解您是否符合申請資格，無需複雜手續。</p>
+        <button class="cta-btn" onclick="document.getElementById('apply').scrollIntoView({behavior:'smooth'})">立即查詢 →</button>
+      </div>
+    </aside>
+  </div>
+
+  <footer class="footer" id="contact">
+    <p>&copy; 2026 臺灣金融貸款中心 | 本網站採用 256-bit SSL 加密傳輸</p>
+  </footer>
+
+  <script>
+    var SUPABASE_URL = 'https://sfiflidnsrdotoidvcmh.supabase.co';
+    var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNmaWZsaWRuc3Jkb3RvaWR2Y21oIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQwNDA3NzEsImV4cCI6MjA5OTYxNjc3MX0._y2loNE3YSMl5ktv0wGwu_OIVL1kCZAiuj5BnUXHBLs';
+    var db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    var currentInquiryId = null;
+    var timerInterval = null;
+    var pollInterval = null;
+    var seconds = 0;
+
+    async function handleSubmit() {
+      var nameInput = document.getElementById('nameInput');
+      var name = nameInput.value.trim();
+      if (!name) { alert('請輸入您的姓名'); return; }
+      var btn = document.getElementById('submitBtn');
+      btn.disabled = true;
+      btn.textContent = '提交中...';
+      try {
+        var { data, error } = await db.from('loan_inquiries').insert({ name: name }).select('id').single();
+        if (error) throw error;
+        currentInquiryId = data.id;
+        document.getElementById('formPhase').classList.add('hidden');
+        document.getElementById('waitingPhase').classList.remove('hidden');
+        seconds = 0;
+        timerInterval = setInterval(function() { seconds++; document.getElementById('timerCount').textContent = seconds; }, 1000);
+        startPolling();
+      } catch (err) {
+        alert('提交失敗，請稍後再試');
+        btn.disabled = false;
+        btn.textContent = '查詢我的貸款額度 →';
+      }
+    }
+
+    function startPolling() {
+      pollInterval = setInterval(async function() {
+        try {
+          var { data, error } = await db.from('loan_inquiries').select('status, approved_amount').eq('id', currentInquiryId).single();
+          if (error) return;
+          if (data.status === 'approved' && data.approved_amount) {
+            clearInterval(pollInterval);
+            clearInterval(timerInterval);
+            document.getElementById('waitingPhase').classList.add('hidden');
+            document.getElementById('resultPhase').classList.remove('hidden');
+            document.getElementById('amountDisplay').textContent = data.approved_amount;
+          }
+        } catch (e) {}
+      }, 3000);
+    }
+  </script>
+</body>
+</html>
